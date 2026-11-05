@@ -1,0 +1,55 @@
+{
+  "reviews": [
+    {
+      "title": "Sample: choose a few things",
+      "about": "A review lists candidates for you to pick between. Open this board with R or #review.",
+      "groups": [
+        {
+          "id": "Sample.Alert",
+          "label": "Alert sound",
+          "about": "Which alert plays when a job finishes?",
+          "items": [
+            {
+              "id": "assets/sounds/beep.wav",
+              "name": "Beep",
+              "by": "sample",
+              "note": "Longer, lower."
+            },
+            {
+              "id": "assets/sounds/blip.wav",
+              "name": "Blip",
+              "by": "sample",
+              "note": "Short and high."
+            }
+          ]
+        },
+        {
+          "id": "Sample.Box",
+          "label": "Box",
+          "about": "Which box ships?",
+          "items": [
+            {
+              "id": "assets/models/cube.obj",
+              "name": "Cube",
+              "by": "sample",
+              "note": "Own texture maps, with a Red variant."
+            },
+            {
+              "id": "assets/models/crate.obj",
+              "name": "Crate",
+              "by": "sample",
+              "note": "Uses the shared atlas."
+            },
+            {
+              "id": "assets/textures/checker.png",
+              "name": "Checker",
+              "by": "sample",
+              "note": "For comparison only.",
+              "ref": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

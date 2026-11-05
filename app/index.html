@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewer-token" content="__VIEWER_TOKEN__">
+<title>Asset viewer</title>
+<link rel="stylesheet" href="/themes/aero/theme.css">
+<link rel="stylesheet" href="/theme/theme.css" data-theme="project">
+<link rel="stylesheet" href="/app/base.css">
+<script type="importmap">
+{ "imports": {
+  "three": "/vendor/three/build/three.module.js",
+  "three/addons/": "/vendor/three/examples/jsm/",
+  "viewer/": "/app/"
+} }
+</script>
+</head>
+<body>
+
+<main id="main">
+  <div id="stage3d" hidden></div>
+  <div id="view2d"></div>
+  <div id="info" class="shadow"></div>
+  <div id="pick" class="win" hidden>
+    <input id="pickNote" placeholder="Note" maxlength="2000" autocomplete="off" aria-label="Note for this item">
+  </div>
+  <div id="bar" class="win" role="toolbar" aria-label="View controls" hidden></div>
+  <div id="review" hidden></div>
+</main>
+
+<nav id="nav" class="win" aria-label="Assets">
+  <h1><span id="title">Assets</span> <small id="total" class="num" aria-live="polite"></small></h1>
+  <div class="search">
+    <input id="q" type="search" placeholder="Search   /" autocomplete="off" spellcheck="false" aria-label="Search the list">
+    <button id="onlyPicked" class="btn" type="button" aria-pressed="false" title="Show picks only">Picks</button>
+  </div>
+  <div id="cats" role="group" aria-label="Categories"></div>
+  <div id="fold" class="seg" role="group" aria-label="Folders">
+    <button id="expandAll" type="button" title="Open every folder">Expand all</button>
+    <button id="collapseAll" type="button" title="Close every folder">Collapse all</button>
+  </div>
+  <div id="list" role="group" aria-label="Items"></div>
+  <p id="keys" class="keys"></p>
+</nav>
+
+<div id="banner" role="alert" hidden></div>
+
+<script type="module" src="/app/app.js"></script>
+</body>
+</html>

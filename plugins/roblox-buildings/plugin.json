@@ -1,0 +1,11 @@
+{
+  "name": "roblox-buildings",
+  "apiVersion": 1,
+  "server": "server.py",
+  "client": "client.js",
+  "styles": ["style.css"],
+  "files": [],
+  "requires": [],
+  "defaults": {"openingProps": null},
+  "types": {"openingProps": "string|null"}
+}

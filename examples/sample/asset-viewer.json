@@ -1,0 +1,22 @@
+{
+  "title": "Asset Viewer sample",
+  "roots": [
+    {
+      "path": "assets",
+      "label": ""
+    }
+  ],
+  "materials": {
+    "assets/models/crate*.obj": {
+      "*": {
+        "set": "assets/textures/atlas"
+      }
+    }
+  },
+  "plugins": {
+    "roblox-anim": {
+      "rigsDir": "rigs",
+      "defaultRig": "box"
+    }
+  }
+}

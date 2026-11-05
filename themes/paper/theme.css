@@ -1,0 +1,64 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Paper: a light theme. It only overrides tokens of themes/aero/theme.css, which loads first, so it proves a theme can
+   restyle the whole viewer (UI, 3D stage, waveforms, icons follow the text colour) from this one file. */
+
+:root {
+  --color-scheme: light;
+
+  --page: #e7e2d6;
+  --world: #f6f2e8;
+  --glass: rgba(255,253,247,.78);
+  --glass-strong: rgba(250,247,238,.94);
+  --glass-line: rgba(60,48,30,.22);
+  --sheen: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0) 42%);
+  --rhead-bg: rgba(250,247,238,.96);
+
+  --fg: #26211a;
+  --ink: #f6f2e8;
+  --text-2: rgba(38,33,26,.7);
+  --text-3: rgba(38,33,26,.46);
+  --accent: #1f6f8b;
+  --danger: #b3332b;
+  --track: rgba(38,33,26,.2);
+  --focus-fill: rgba(38,33,26,.09);
+  --hover-fill: rgba(38,33,26,.05);
+  --hover-line: rgba(38,33,26,.3);
+  --seg-on: rgba(38,33,26,.12);
+  --done-line: rgba(38,33,26,.5);
+  --cand-line: rgba(31,111,139,.5);
+  --scrollbar: rgba(38,33,26,.35);
+  --text-shadow: rgba(255,255,255,.7);
+
+  --radius: 3px;
+  --radius-sm: 2px;
+
+  --img-bg-dark: #3b3a36;
+  --img-bg-light: #fffdf7;
+  --img-checker-a: #d8d2c4;
+  --img-checker-b: #ece7da;
+  --img-bg-add: #000;
+
+  --stage-sky: #fffaf0;
+  --stage-ground: #b8ad94;
+  --stage-hemi-intensity: 1.1;
+  --stage-key: #fff6e5;
+  --stage-key-intensity: 2.6;
+  --stage-rim: #9cc7d8;
+  --stage-rim-intensity: .6;
+  --stage-env-intensity: .8;
+  --stage-grid: rgb(38 33 26 / .16);
+  --stage-shadow: rgb(60 48 30 / .28);
+  --model-clay: #cfc8b8;
+  --model-glass: rgb(110 160 180 / .5);
+  --model-edge: rgb(38 33 26 / .3);
+
+  --wave-axis: rgba(38,33,26,.18);
+  --wave-base: rgba(38,33,26,.5);
+  --wave-kept: rgba(38,33,26,.55);
+  --wave-dim: rgba(38,33,26,.18);
+  --wave-played: #1f6f8b;
+  --wave-head: #b3332b;
+  --wave-playhead: #b3332b;
+  --wave-cut-fill: rgba(31,111,139,.16);
+  --wave-cut-handle: #1f6f8b;
+}

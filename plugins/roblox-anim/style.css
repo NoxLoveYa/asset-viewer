@@ -1,0 +1,3 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* roblox-anim: the timeline takes a whole row of the view bar. Colours come from the theme's tokens. */
+.timeline { flex: 1 0 100%; }

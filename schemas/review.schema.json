@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "asset-viewer review file (review.json)",
+  "description": "Candidates to choose between: reviews, each of groups (one pick per group), each of items. Item ids are catalog ids (a project path, plus #Clip for an animation). Unknown keys are allowed.",
+  "type": "object",
+  "required": ["reviews"],
+  "properties": {
+    "reviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "groups"],
+        "properties": {
+          "title": {"type": "string"},
+          "about": {"type": "string"},
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "items"],
+              "properties": {
+                "id": {"type": "string"},
+                "label": {"type": "string"},
+                "about": {"type": "string"},
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id"],
+                    "properties": {
+                      "id": {"type": "string"},
+                      "name": {"type": "string"},
+                      "by": {"type": "string"},
+                      "note": {"type": "string"},
+                      "ref": {"type": ["boolean", "null"], "description": "There to look at, not to pick."}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

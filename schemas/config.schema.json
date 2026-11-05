@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "asset-viewer config (asset-viewer.json or .asset-viewer/config.json)",
+  "description": "Every path is relative to the project folder and uses /. The viewer also checks things a schema cannot (paths that leave the project, regex syntax, plugin keys against each plugin's manifest).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {"type": "string"},
+    "title": {"type": "string", "minLength": 1, "description": "Page title and nav header (default: the project folder's name)."},
+    "port": {"type": "integer", "minimum": 1, "maximum": 65535, "description": "Default 8765; --port wins."},
+    "roots": {
+      "type": "array",
+      "description": "Folders to list. A string is a path; an object adds a label that prefixes the folder names in the list ('' for none; default: the last path segment).",
+      "items": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "object", "required": ["path"], "additionalProperties": false,
+           "properties": {"path": {"type": "string"}, "label": {"type": "string"}}}
+        ]
+      }
+    },
+    "hide": {"type": "array", "items": {"type": "string"}, "description": "Globs of project paths to hide from the list and from /files/. A pattern means that path or anything below it."},
+    "categories": {"type": "array", "items": {"type": "string"}, "uniqueItems": true, "description": "Nav order of the kinds."},
+    "vfxFolders": {"type": "array", "items": {"type": "string", "minLength": 1, "pattern": "^[^/]+$"}, "description": "A texture under a folder of this name is a VFX sheet (default: vfx)."},
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maps": {"type": "array", "items": {"type": "string", "pattern": "^\\w+$"}},
+        "front": {"enum": ["+z", "-z"]},
+        "glassNames": {"type": "array", "items": {"type": "string"}, "description": "Regexes of mesh names drawn as glass; matched by the page with JavaScript's RegExp."}
+      }
+    },
+    "materials": {
+      "type": "object",
+      "description": "Shared atlases: a glob of model paths -> mesh or material name ('*' for any other) -> the map set.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object", "required": ["set"], "additionalProperties": false,
+          "properties": {
+            "set": {"type": "string", "minLength": 1},
+            "alpha": {"enum": ["cutout", null]},
+            "doubleSided": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "theme": {"type": "string", "minLength": 1, "description": "A built-in theme name or the path of a .css file."},
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"picks": {"type": "string"}, "review": {"type": "string"}}
+    },
+    "prefsPrefix": {"type": "string", "maxLength": 64},
+    "pluginDirs": {"type": "array", "items": {"type": "string"}, "description": "Project folders holding plugins. Their Python code runs only with --trust-project-plugins."},
+    "plugins": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z][a-z0-9-]{0,40}$"},
+      "additionalProperties": {"type": ["object", "null"]},
+      "description": "A key turns the plugin on; its value is that plugin's config ('enabled': false turns it off)."
+    }
+  }
+}

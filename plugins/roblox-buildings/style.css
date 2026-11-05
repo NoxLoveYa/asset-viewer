@@ -1,0 +1,5 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* roblox-buildings: the token this plugin adds. A theme's :root value wins over this default (zero specificity). */
+:where(:root) {
+  --wish-box: rgb(210 128 74 / .45); /* the box standing in for a prop that is not made yet */
+}

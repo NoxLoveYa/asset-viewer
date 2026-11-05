@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- The client smoke page. It is not part of the app: tools/smoke.py serves it at /smoke/smoke.html through its own
+     handler (the production server answers 404 for it), opens it in headless Chrome or Edge and reads #result.
+     Same shell and import map as app/index.html; smoke.js mounts every view, runs the real app (app/app.js) in frames
+     and drives the review board. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewer-token" content="__VIEWER_TOKEN__">
+<title>Asset viewer smoke test</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/themes/aero/theme.css">
+<link rel="stylesheet" href="/theme/theme.css" data-theme="project">
+<link rel="stylesheet" href="/app/base.css">
+<script type="importmap">
+{ "imports": {
+  "three": "/vendor/three/build/three.module.js",
+  "three/addons/": "/vendor/three/examples/jsm/",
+  "viewer/": "/app/"
+} }
+</script>
+</head>
+<body>
+
+<main id="main">
+  <div id="stage3d" hidden></div>
+  <div id="view2d"></div>
+  <div id="info" class="shadow"></div>
+  <div id="bar" class="win" role="toolbar" aria-label="View controls" hidden></div>
+  <div id="review" hidden></div>
+</main>
+
+<nav id="nav" class="win" aria-label="Assets">
+  <div id="list" role="group" aria-label="Items"></div>
+</nav>
+
+<div id="banner" role="alert" hidden></div>
+<pre id="result" hidden></pre>
+
+<script type="module" src="/smoke/smoke.js"></script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Aero: the baseline theme and the reference for every token. Dark glass, white lines, caps labels, mono numbers.
+   It always loads first, so every token has a value; a project theme (config `theme`) loads after it and overrides any
+   subset. Tokens are plain custom properties on :root; JS reads the same ones through app/theme.js (colours may be any
+   CSS colour syntax, opacity rides in the colour's alpha). Plugins declare their own tokens in :where(:root). */
+
+@font-face { font-family: "Titillium Web"; font-weight: 300; font-style: normal; font-display: swap; src: url("fonts/titillium-web-300.woff2") format("woff2"); }
+@font-face { font-family: "Titillium Web"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/titillium-web-400.woff2") format("woff2"); }
+@font-face { font-family: "Titillium Web"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/titillium-web-600.woff2") format("woff2"); }
+@font-face { font-family: "Roboto Mono"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/roboto-mono-400.woff2") format("woff2"); }
+
+:root {
+  --color-scheme: dark;
+
+  /* surfaces */
+  --page: #0b0e10;
+  --world: #151b1e;
+  --glass: rgba(9,12,14,.56);
+  --glass-strong: rgba(9,12,14,.74);
+  --glass-line: rgba(255,255,255,.16);
+  --sheen: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0) 42%);
+  --rhead-bg: rgba(9,12,14,.9);
+
+  /* text and lines */
+  --fg: #fff;
+  --ink: #0b0e10;              /* text on a --fg filled control (the primary button) */
+  --text-2: rgba(255,255,255,.62);
+  --text-3: rgba(255,255,255,.38);
+  --accent: #a8d4de;
+  --danger: #e0524a;
+  --track: rgba(255,255,255,.18);
+  --focus-fill: rgba(255,255,255,.10);
+  --hover-fill: rgba(255,255,255,.05);
+  --hover-line: rgba(255,255,255,.25);
+  --seg-on: rgba(255,255,255,.12);
+  --done-line: rgba(255,255,255,.4);
+  --cand-line: rgba(168,212,222,.4);
+  --scrollbar: rgba(255,255,255,.3);
+  --text-shadow: rgba(0,0,0,.7);
+  --focus-ring: var(--accent);
+
+  /* shape, motion, type */
+  --radius: 6px;
+  --radius-sm: 4px;
+  --quint: cubic-bezier(.22,1,.36,1);
+  --font: "Titillium Web", "Segoe UI", system-ui, sans-serif;
+  --mono: "Roboto Mono", ui-monospace, Consolas, monospace;
+
+  /* images and flipbooks */
+  --img-bg-dark: #0f1315;
+  --img-bg-light: #d9dddf;
+  --img-checker-a: #2a2f32;
+  --img-checker-b: #1c2023;
+  --img-bg-add: #000;
+
+  /* the 3D stage (opacity in the alpha) */
+  --stage-sky: #cfe3ea;
+  --stage-ground: #2a2420;
+  --stage-hemi-intensity: .8;
+  --stage-key: #fff1e0;
+  --stage-key-intensity: 2.2;
+  --stage-rim: #a8d4de;
+  --stage-rim-intensity: .8;
+  --stage-env-intensity: .6;
+  --stage-grid: rgb(255 255 255 / .07);
+  --stage-shadow: rgb(0 0 0 / .35);
+  --model-clay: #b9bec2;
+  --model-glass: rgb(159 196 208 / .5);
+  --model-edge: rgb(0 0 0 / .25);
+
+  /* waveforms */
+  --wave-axis: rgba(255,255,255,.12);
+  --wave-base: rgba(255,255,255,.45);
+  --wave-kept: rgba(255,255,255,.5);
+  --wave-dim: rgba(255,255,255,.16);
+  --wave-played: #fff;
+  --wave-head: #a8d4de;
+  --wave-playhead: #fff;
+  --wave-cut-fill: rgba(168,212,222,.16);
+  --wave-cut-handle: #a8d4de;
+
+  /* icons: url() values drawn as masks in the text colour; use root-absolute paths (/app/..., /files/...) */
+  --icon-model: url("/app/icons/model.svg");
+  --icon-texture: url("/app/icons/texture.svg");
+  --icon-vfx: url("/app/icons/vfx.svg");
+  --icon-sound: url("/app/icons/sound.svg");
+  --icon-review: url("/app/icons/review.svg");
+  --icon-anim: url("/app/icons/anim.svg");
+}

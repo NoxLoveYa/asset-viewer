@@ -1,0 +1,17 @@
+{
+  "name": "roblox-anim",
+  "apiVersion": 1,
+  "server": "server.py",
+  "client": "client.js",
+  "styles": ["style.css"],
+  "files": ["view.js"],
+  "requires": [],
+  "defaults": {"rigsDir": null, "defaultRig": null, "bodyAim": {}, "files": {}},
+  "types": {
+    "rigsDir": "string|null",
+    "defaultRig": "string|null",
+    "bodyAim": {"*": "number"},
+    "files": {"*": {"rig": "string|null", "prop": "string|null", "under": {"*": "array"}, "up": "array", "busy": "array",
+                    "bodyAim": {"*": "number"}, "aimHead": "array"}}
+  }
+}

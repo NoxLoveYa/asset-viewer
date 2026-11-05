@@ -1,0 +1,14 @@
+{
+  "package": "fontsource",
+  "versions": {
+    "titillium-web": "5.3.0",
+    "roboto-mono": "5.3.0"
+  },
+  "files": {
+    "OFL.txt": "34e28162de0e8bef1d1b3105934a80bba1c28976f943279549df0c64abe82d6f",
+    "roboto-mono-400.woff2": "e03013e0baa5690a803c188da2214d920c3245b25ad78421ecc8ae86cd842ae9",
+    "titillium-web-300.woff2": "b6287de6fc5553c57520eedd963a16b66f3c192a2c65916243a0a92a8e0e8a8f",
+    "titillium-web-400.woff2": "861b80b49d2a634d8746e2e45c672309d9ba69a2fdd95da2af034d7a1d09b3f9",
+    "titillium-web-600.woff2": "f356ff5613e1b6789a47ae3bd6b72fa6fb61d44493811bcb758fb4229b7a8bcb"
+  }
+}
