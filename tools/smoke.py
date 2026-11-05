@@ -40,7 +40,7 @@ from viewer.static import csp_for  # noqa: E402
 
 SAMPLE = os.path.join(REPO, "examples", "sample")
 SMOKE_DIR = os.path.join(REPO, "tools", "smoke")
-SMOKE_FILES = {"/smoke/smoke.html": "smoke.html", "/smoke/smoke.js": "smoke.js"}
+SMOKE_FILES = {"/smoke/smoke.html": "smoke.html", "/smoke/smoke.js": "smoke.js", "/smoke/probe.js": "probe.js"}
 EXTRA_PREFIX = "smoke_extra_"  # files the page adds to the project's textures to change the catalog
 CANDIDATES = {
     "nt": [r"%ProgramFiles%\Google\Chrome\Application\chrome.exe", r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe",
@@ -88,6 +88,7 @@ class RequestLog:
         self.injected = []  # the statuses the page was made to see: its console says so, which is no error
         self.files = []  # paths of /files/ answered, for the page to count
         self.extra = 0
+        self.config_text = None  # the project's config as it was, before the page edited a plugin's part of it
 
     def handler_class(self):
         log = self
@@ -180,6 +181,17 @@ class RequestLog:
             if body.get("remove_extra"):
                 for path in glob.glob(os.path.join(app.project.root, "assets", "textures", EXTRA_PREFIX + "*.png")):
                     os.remove(path)
+            if "plugin_config" in body or body.get("restore_config"):
+                path = os.path.join(app.project.root, "asset-viewer.json")
+                if self.config_text is None:
+                    with open(path, encoding="utf-8") as f:
+                        self.config_text = f.read()
+                cfg = json.loads(self.config_text)
+                for name, extra in (body.get("plugin_config") or {}).items():
+                    cfg["plugins"][name].update(extra)
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(self.config_text if body.get("restore_config") else json.dumps(cfg, indent=2))
+                app._last_poll = 0  # the page runs on virtual time: the server's look-at-the-file interval would not pass
             if body.get("add_texture") or body.get("remove_extra"):
                 app.catalog._at = 0  # the page runs on virtual time: the catalog's one-second cache would never expire for it
         return out

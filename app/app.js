@@ -6,7 +6,7 @@
 import { el, icon, activatable, fmtBytes, mapPaths, pref, setPref, configurePrefs, safeDecode, sleep, url, own, isString } from "./ui.js";
 import { api, ApiError } from "./api.js";
 import * as theme from "./theme.js";
-import { registry, addCategory, loadPlugins, viewLoader } from "./plugins.js";
+import { registry, addCategory, loadPlugins, updatePluginConfigs, viewLoader } from "./plugins.js";
 import { createPicks } from "./picks.js";
 import { createViewHost } from "./viewhost.js";
 import { mount as mountReview, progress } from "./review.js";
@@ -100,11 +100,16 @@ function applyConfig(next) {
   $("#title").title = next.title || "";
   theme.setThemeVersion(next.themeVersion);
   notify("config", [next.error && "Config: " + next.error, ...(next.warnings || [])], next.error ? "err" : "warn");
-  // plugin code and the categories are set up once, at start: a change to them needs a reload (the server does not load
-  // plugin code again while it runs)
-  const sig = JSON.stringify([next.categories, next.plugins]);
+  // plugin code, styles and the categories are set up once, at start: a change to which plugins are on, their files or the
+  // categories needs a reload. A plugin's config alone does not: its viewer gets it in place.
+  const sig = JSON.stringify([next.categories, (next.plugins || []).map((p) => [p.name, p.client, p.styles])]);
   if (loadedSig === null) loadedSig = sig;
   notify("reload", sig === loadedSig ? null : "The plugins or categories changed: reload the page to apply them.");
+  // the open item is shown again, so add-ons prepare with the new config
+  if (updatePluginConfigs(next.plugins).length && !firstCatalog && !state.board && state.sel) {
+    const item = state.byId.get(state.sel);
+    if (item) host.show(item).catch((e) => console.error("config change:", e));
+  }
 }
 
 function computeCats() {

@@ -24,7 +24,8 @@ Turn it on in the project's config:
 
 ## Config
 
-Plugins load once, when the viewer starts: restart it after you change this config.
+Edits to this config apply at once (the clips, rigs and aim settings are rebuilt on the next scan); only the plugin's
+code is loaded once, at start.
 
 | Key | Default | Meaning |
 |---|---|---|

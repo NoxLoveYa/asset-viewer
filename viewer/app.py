@@ -14,12 +14,12 @@ from . import APP_NAME, VERSION
 from .catalog import Catalog
 from .config import CORE_KINDS, ConfigError, ConfigManager, project_hash
 from .picks import PicksStore, ReviewReader
-from .plugins import Registry
+from .plugins import PluginError, Registry
 from .project import PathError, Project
 
 POLL_INTERVAL = 0.5  # seconds between looks at the config file
 STATE_DIR_ENV = "ASSET_VIEWER_STATE_DIR"  # overrides state_dir() (tests)
-RESTART_NOTE = "plugins / pluginDirs changed in the config: restart the viewer to apply them (plugin code is loaded once, at start)"
+RESTART_NOTE = "a plugin was enabled or disabled, or pluginDirs changed, in the config: restart the viewer to apply it (plugin code is loaded once, at start)"
 
 
 def state_dir_candidates():
@@ -77,6 +77,7 @@ class App:
         self.port = None
         self.error = None  # the last failed config reload, shown by the page
         self.notices = []  # warnings of this run (a plugin change that needs a restart)
+        self._plugin_error = None  # why the last reload of the plugins' config failed
         self._token_path = None
         self._gen = 0
         self._last_poll = time.monotonic()
@@ -92,7 +93,8 @@ class App:
 
     @staticmethod
     def _signature(config):
-        return json.dumps([config.plugins, config.plugin_dirs], sort_keys=True)
+        """Which plugins are on and where they may come from: a change needs a restart (their config does not)."""
+        return json.dumps([sorted(config.plugin_names()), config.plugin_dirs])
 
     def _build_state(self, config, registry):
         self._gen += 1
@@ -102,8 +104,9 @@ class App:
 
     def refresh(self, force=False):
         """Look at the config file (at most every POLL_INTERVAL) and apply a change: roots, hide, materials, theme and
-        the rest take effect at once. The plugins do not: their code was loaded at start and is never loaded again, so a
-        changed `plugins` or `pluginDirs` section only raises a notice. A bad edit keeps the old state and sets `error`."""
+        the rest take effect at once, and so does each running plugin's own config (re-merged, re-validated, `register`
+        run again on the code imported at start). Plugin code is never imported again: enabling or disabling a plugin or
+        changing `pluginDirs` only raises a notice (restart to apply). A bad edit keeps the old state and sets `error`."""
         now = time.monotonic()
         if not force and now - self._last_poll < POLL_INTERVAL:
             return
@@ -112,8 +115,13 @@ class App:
             if self.configs.poll():
                 config = self.configs.config
                 self.notices = [RESTART_NOTE] if self._signature(config) != self._plugin_sig else []
-                self.state = self._build_state(config, self.state.registry)
-            self.error = self.configs.error
+                registry, self._plugin_error = self.state.registry, None
+                try:
+                    registry = Registry.reconfigure(self.state.registry, self.project, config)
+                except PluginError as e:
+                    self._plugin_error = str(e)
+                self.state = self._build_state(config, registry)  # on an error the plugins keep their old config
+            self.error = self.configs.error or self._plugin_error
 
     def attach(self, server):
         self.port = server.server_address[1]

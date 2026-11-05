@@ -319,6 +319,30 @@ async function main() {
       check(!(await server())["assets/textures/checker.png"]?.picked, "a reference must not be pickable");
     }
 
+    // layout: from a narrow window to a wide one nothing in a row spills past its card, and a sound's text keeps a width
+    const was = board.style.width;
+    try {
+      for (const w of [520, 700, 900, 1200]) {
+        board.style.width = w + "px";
+        await sleep(50);
+        for (const card of $$(".rgroup", board)) {
+          const box = card.getBoundingClientRect();
+          for (const row of $$(".rrow", card)) {
+            for (const child of [row, ...row.querySelectorAll("*")]) {
+              const c = child.getBoundingClientRect();
+              if (!c.width && !c.height) continue; // not displayed
+              check(c.left >= box.left - 0.5 && c.right <= box.right + 0.5,
+                `at ${w}px a .${child.className || child.tagName} spills past its card (${Math.round(c.left)}–${Math.round(c.right)}, card ${Math.round(box.left)}–${Math.round(box.right)})`);
+            }
+            const text = $(".rtext", row);
+            check(!text || text.getBoundingClientRect().width >= 100, `at ${w}px a row's text is squeezed to ${Math.round(text.getBoundingClientRect().width)}px`);
+          }
+        }
+      }
+    } finally {
+      board.style.width = was;
+    }
+
     b.destroy();
     document.body.classList.remove("reviewing");
     board.hidden = true;
@@ -526,6 +550,31 @@ async function main() {
     save("renewed " + stamp);
     await waitFor(async () => (await serverPicks())[id]?.note === "renewed " + stamp, "the save under a new token", 10000);
     check(banner.hidden, "a stale token showed an error: " + banner.textContent);
+  }));
+
+  await step("app: a plugin's config edited while the page is open reaches its viewer, with no reload banner", () => withApp("", async (a) => {
+    await started(a);
+    const probe = a.d.createElement("script");
+    probe.type = "module";
+    probe.src = "/smoke/probe.js";
+    a.d.head.append(probe);
+    await waitFor(() => a.w.__pluginConfig, "the probe to load");
+    const blade = () => a.w.__pluginConfig("roblox-anim")?.bodyAim?.blade;
+    const next = 37;
+    check(a.w.__pluginConfig("roblox-anim") && blade() !== next, "the anim plugin's viewer is missing or already has blade 37: " + JSON.stringify(a.w.__pluginConfig("roblox-anim")));
+    try {
+      await ctl({ plugin_config: { "roblox-anim": { bodyAim: { blade: next } } } });
+      try {
+        await waitFor(() => blade() === next, () => `viewer.config.bodyAim.blade to become ${next} (is ${blade()})`, 12000);
+      } catch (e) {
+        const served = (await api("/api/config")).data;
+        throw new Error(`${e.message}; the server serves ${JSON.stringify(served.plugins)}, error ${served.error}, banner "${$("#banner", a.d).textContent}", total ${$("#total", a.d).textContent}`);
+      }
+      await sleep(2500);
+      check($("#banner", a.d).hidden || !/reload the page/.test($("#banner", a.d).textContent), "a config edit asked for a reload: " + $("#banner", a.d).textContent);
+    } finally {
+      await ctl({ restore_config: true });
+    }
   }));
 
   frames.forEach((f) => f.close());

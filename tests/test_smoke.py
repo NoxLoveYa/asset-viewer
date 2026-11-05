@@ -4,6 +4,7 @@ the handler's controls work, and tools/smoke.py reads a verdict correctly. The b
 `python tools/smoke.py` (here only with AV_SMOKE=1)."""
 import contextlib
 import io
+import json
 import os
 import re
 import shutil
@@ -52,6 +53,7 @@ class SmokePageTest(SmokeServer):
         self.assertNotRegex(page, r'\sstyle="')  # no style attribute: style-src 'self'
         js = self.client.get("/smoke/smoke.js")
         self.assertEqual((js.status, js.header("content-type")), (200, "text/javascript; charset=utf-8"))
+        self.assertEqual(self.client.get("/smoke/probe.js").status, 200)
         self.assertEqual(self.client.get("/smoke/nothing.js").status, 404)
         self.assertEqual(self.client.get("/smoke/../tools/smoke.py").status, 404)
         self.assertEqual(self.client.get("/smoke/ctl").status, 404)
@@ -66,7 +68,7 @@ class SmokePageTest(SmokeServer):
         for name in ("smoke.html", "smoke.js"):
             self.assertFalse(os.path.exists(os.path.join(REPO, "app", name)), "app/%s must not exist" % name)
         client = self.serve(App(os.path.join(REPO, "examples", "sample"), None, tool_dir=REPO))
-        for path in ("/app/smoke.html", "/app/smoke.js", "/smoke/smoke.html", "/smoke/smoke.js", "/smoke/ctl"):
+        for path in ("/app/smoke.html", "/app/smoke.js", "/smoke/smoke.html", "/smoke/smoke.js", "/smoke/probe.js", "/smoke/ctl"):
             self.assertEqual(client.get(path).status, 404, path)
         self.assertEqual(client.post("/smoke/ctl", json_body={"fail_picks": 1}).status, 404)
         self.assertEqual(client.get("/").header("x-frame-options"), "DENY")
@@ -84,6 +86,8 @@ class SmokePageTest(SmokeServer):
     def test_the_steps_for_the_audit_fixes_are_there(self):
         with open(os.path.join(REPO, "tools", "smoke", "smoke.js"), encoding="utf-8") as f:
             js = f.read()
+        self.assertIn("spills past its card", js)
+        self.assertIn("reaches its viewer, with no reload banner", js)
         for tag in ("(H4)", "(H5)", "(M3)", "(H6)", "(M12)", "(M4)"):
             self.assertIn(tag, js)
 
@@ -120,6 +124,17 @@ class ControlsTest(SmokeServer):
         self.assertEqual(self.client.post("/api/picks", json_body=body, token=self.app.token).status, 200)
         self.assertEqual(self.client.post("/api/picks", json_body=body).status, 403)  # a second one is not expected
         self.assertEqual(len(self.log.bad), 1)
+
+    def test_a_plugins_config_is_edited_and_put_back(self):
+        path = os.path.join(self.project, "asset-viewer.json")
+        with open(path, encoding="utf-8") as f:
+            original = f.read()
+        self.ctl(plugin_config={"roblox-anim": {"bodyAim": {"blade": 37}}})
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(json.load(f)["plugins"]["roblox-anim"]["bodyAim"], {"blade": 37})
+        self.ctl(restore_config=True)
+        with open(path, encoding="utf-8") as f:
+            self.assertEqual(f.read(), original)
 
     def test_the_files_served_are_counted_by_prefix(self):
         self.client.get("/files/assets/sounds/beep.wav")

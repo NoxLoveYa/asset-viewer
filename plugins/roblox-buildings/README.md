@@ -10,8 +10,8 @@ is not there.
 
 `openingProps` is the path template of the door and window models of a building's openings. `{dir}` is `doors` for a
 prop whose name starts with `Door`, else `windows`, and `{prop}` is the opening's `prop` name. Without it the openings
-are left out (the furniture still shows). Plugins load once, when the viewer starts: restart it after you change this
-config.
+are left out (the furniture still shows). The page reads it each time it shows a building, so a change applies to the
+open building without a reload.
 
 ## Building: a report beside an FBX
 

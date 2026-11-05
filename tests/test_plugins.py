@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 import os
+import sys
 import unittest
 from unittest import mock
 
@@ -330,17 +331,83 @@ class PluginTest(PluginCase):
         self.assertEqual(self.ids(app), ["more/b.png"])
         self.assertIsNone(app.error)
 
-    def test_a_changed_plugin_section_needs_a_restart_and_says_so(self):
+    def test_a_plugins_own_config_is_applied_at_once(self):
         self.plugin()
         app = self.app_with()
-        self.edit_config(plugins={"fixture": {"count": 9}})
+        self.assertEqual(self.catalog(app)["plugins"]["fixture"]["count"], 1)
+        self.edit_config(plugins={"fixture": {"count": 9, "nested": {"b": 7}}})
         app.refresh(force=True)
-        self.assertEqual(self.catalog(app)["plugins"]["fixture"]["count"], 1)  # the running plugin keeps its config
-        self.assertEqual(len(app.notices), 1)
-        self.assertIn("restart", app.public_config()["warnings"][-1])
-        self.edit_config(plugins={"fixture": {}})  # put back: no notice
+        self.assertEqual(self.catalog(app)["plugins"]["fixture"]["count"], 9)  # no restart
+        self.assertEqual(app.state.registry.get("fixture").config, {"count": 9, "nested": {"a": 1, "b": 7}})
+        self.assertEqual(app.public_config()["plugins"][0]["config"], {"shown": 9})
+        self.assertEqual((app.notices, app.error), ([], None))
+        self.assertNotIn("restart", " ".join(app.public_config()["warnings"]))
+
+    def test_state_a_plugin_derives_from_its_config_is_rebuilt(self):  # register runs again, on the module already imported
+        self.plugin(server="def register(api):\n    n = api.config['count'] * 10\n    api.catalog_extra(lambda: n)\n")
+        app = self.app_with()
+        self.assertEqual(self.catalog(app)["plugins"]["fixture"], 10)
+        self.edit_config(plugins={"fixture": {"count": 4}})
+        app.refresh(force=True)
+        self.assertEqual(self.catalog(app)["plugins"]["fixture"], 40)
+
+    def test_routes_and_areas_follow_the_new_config(self):
+        server = ("def register(api):\n    d = api.config['dir']\n    api.serve(d)\n    api.writes(d)\n"
+                  "    api.route('GET', 'where', lambda req: {'dir': d})\n")
+        self.plugin(manifest={**MANIFEST, "defaults": {"dir": "one"}, "types": {}}, server=server)
+        self.write("one/a.json", "{}")
+        self.write("two/b.json", "{}")
+        app = self.app_with()
+        client = self.serve(app)
+        self.assertEqual((client.get("/files/one/a.json").status, client.get("/files/two/b.json").status), (200, 404))
+        self.edit_config(plugins={"fixture": {"dir": "two"}})
+        app.refresh(force=True)
+        self.assertEqual((client.get("/files/one/a.json").status, client.get("/files/two/b.json").status), (404, 200))
+        self.assertEqual(client.get("/api/plugins/fixture/where").json(), {"dir": "two"})
+
+    def test_a_bad_plugin_config_is_reported_and_the_plugin_keeps_its_old_one(self):
+        self.plugin()
+        app = self.app_with()
+        self.edit_config(plugins={"fixture": {"count": "bad"}}, title="Other")
+        app.refresh(force=True)
+        self.assertIn("plugins.fixture.count: number expected", app.error)
+        self.assertEqual(self.catalog(app)["plugins"]["fixture"]["count"], 1)
+        self.assertEqual(app.state.config.title, "Other")  # the rest of the edit still applied
+        self.assertEqual(app.public_config()["error"], app.error)
+        self.edit_config(plugins={"fixture": {"count": 5}})
+        app.refresh(force=True)
+        self.assertEqual((app.error, self.catalog(app)["plugins"]["fixture"]["count"]), (None, 5))
+
+    def test_enabling_or_disabling_a_plugin_or_changing_plugin_dirs_needs_a_restart_and_says_so(self):
+        self.plugin()
+        self.plugin("late", base="plugdir")
+        app = self.app_with()
+        for change in ({"plugins": {"fixture": {}, "late": {}}}, {"plugins": {}}, {"plugins": {"fixture": {"enabled": False}}},
+                       {"pluginDirs": ["plugdir", "elsewhere"]}):
+            with self.subTest(change=change):
+                self.edit_config(**change)
+                app.refresh(force=True)
+                self.assertEqual(len(app.notices), 1)
+                self.assertIn("restart", app.public_config()["warnings"][-1])
+                self.assertEqual([p.name for p in app.state.registry.plugins], ["fixture"])  # nothing was loaded or dropped
+        self.edit_config()  # put back: no notice
         app.refresh(force=True)
         self.assertEqual(app.notices, [])
+
+    def test_a_config_edit_never_imports_a_plugin_again(self):
+        self.plugin(server=SERVER + "\nBORN = object()\n")
+        app = self.app_with()
+        module = sys.modules["viewer_plugin_fixture"]
+        born = module.BORN
+        self.edit_config(plugins={"fixture": {"count": 2}})
+        app.refresh(force=True)
+        self.assertIs(sys.modules["viewer_plugin_fixture"], module)
+        self.assertIs(sys.modules["viewer_plugin_fixture"].BORN, born)
+        self.write("plugdir/fixture/server.py", SERVER + "\nBORN = 'edited on disk'\n")  # a change on disk is not picked up
+        self.edit_config(plugins={"fixture": {"count": 3}})
+        app.refresh(force=True)
+        self.assertIs(sys.modules["viewer_plugin_fixture"].BORN, born)
+        self.assertEqual(self.catalog(app)["plugins"]["fixture"]["count"], 3)
 
     def test_a_new_plugin_dir_in_the_config_is_not_loaded_on_reload(self):
         self.plugin()

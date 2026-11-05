@@ -58,8 +58,8 @@ for a thumbnail.
 The config is one JSON file in the project: `asset-viewer.json`, or `.asset-viewer/config.json`, or the file named by
 `--config`. Every path in it is relative to the project and uses `/`. The viewer reads the file again when it changes. If
 an edit is bad, the viewer keeps the last good config and shows the error in a red banner on the page. Roots, hidden
-paths, materials, the theme and the other keys apply at once. Plugins load once, at start: a change to `plugins` or
-`pluginDirs` needs a restart, and the page says so.
+paths, materials, the theme, a plugin's own config and the other keys apply at once. Plugin code is imported once, at
+start: turning a plugin on or off, or changing `pluginDirs`, needs a restart, and the page says so.
 
 ```json
 {
@@ -288,7 +288,7 @@ A plugin is a folder with a `plugin.json`, an optional `server.py` and optional 
 add data to items, add views, model add-ons and API routes, and run checks for `--check`. Turn a plugin on by naming it
 under `plugins` in the config. The plugins in the tool's `plugins/` folder always load. A plugin in one of the
 config's `pluginDirs` is project code: it loads only when you start the viewer with `--trust-project-plugins`, and
-without the flag the viewer prints a warning that names what it skipped. Plugins load once, at start. Three plugins ship
+without the flag the viewer prints a warning that names what it skipped. Plugin code is imported once, at start (a plugin's own config can be edited while it runs). Three plugins ship
 in `plugins/`:
 
 | Plugin | What it does |

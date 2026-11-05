@@ -164,6 +164,20 @@ class RigJsonTest(RigExportCase):
         self.assertEqual(r.json()["wrote"], "config/rigs/surv.json")
         self.assertTrue(os.path.isfile(os.path.join(self.project_dir, "config", "rigs", "surv.json")))
 
+    def test_a_new_rigs_folder_in_roblox_anim_s_config_applies_without_a_restart(self):
+        self.assertEqual(self.rig("a", RIG).json()["wrote"], "rigs/a.json")
+        path = self.write("asset-viewer.json", {"roots": ["assets"], "plugins": {"roblox-anim": {"rigsDir": "elsewhere/rigs"},
+                                                                                "roblox-rig-export": {}}})
+        os.utime(path, (os.path.getmtime(path) + 9,) * 2)
+        import time
+        time.sleep(0.6)
+        self.client.get("/api/config")
+        self.assertEqual(self.rig("b", RIG).json()["wrote"], "elsewhere/rigs/b.json")
+        self.assertTrue(os.path.isfile(os.path.join(self.project_dir, "elsewhere", "rigs", "b.json")))
+        self.assertFalse(os.path.exists(self.rigs("b.json")))
+        # and the old folder is no longer a write area
+        self.assertEqual(self.client.post(BASE + "rig/c", body=json.dumps(RIG).encode(), token=None).json()["wrote"], "elsewhere/rigs/c.json")
+
     def test_partial_uploads_survive_a_config_reload(self):  # plugin code is never reloaded, so the uploads stay
         rgba = bytes(range(32))
         self.chunk("hero", "img", rgba[0:12], 4, 2, 0, 2)

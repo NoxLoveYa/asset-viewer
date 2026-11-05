@@ -139,7 +139,7 @@ body.reviewing #info, body.reviewing #pick, body.reviewing #bar, body.reviewing 
 .rset, .rgroup { scroll-margin-top: 100px; } /* a jump lands under the sticky header */
 .rset > h3 { margin: 20px 4px 6px; font: 600 12px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--text-2); }
 .rset > p { margin: 0 4px 12px; color: var(--text-2); }
-.rgroup { margin-bottom: 12px; padding: 12px 10px 8px; background: var(--glass); border: 1px solid var(--glass-line); border-radius: var(--radius); transition: border-color .16s var(--quint); }
+.rgroup { container-type: inline-size; min-width: 0; margin-bottom: 12px; padding: 12px 10px 8px; background: var(--glass); border: 1px solid var(--glass-line); border-radius: var(--radius); transition: border-color .16s var(--quint); }
 .rgroup.done { border-color: var(--done-line); }
 .rgroup header { display: flex; align-items: baseline; gap: 10px; padding: 0 4px; }
 .rgroup h4 { margin: 0; font: 600 14px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; }
@@ -147,14 +147,19 @@ body.reviewing #info, body.reviewing #pick, body.reviewing #bar, body.reviewing 
 .rgroup .rstatus { margin-left: auto; font: 600 10px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
 .rgroup .rstatus.done { color: var(--fg); }
 .rgroup > p { margin: 6px 4px 8px; color: var(--text-2); }
-.rrow { display: grid; grid-template-columns: 32px 340px minmax(0, 1fr) auto 210px; align-items: center; gap: 12px; padding: 6px 6px; border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; transition: background .16s var(--quint), border-color .16s var(--quint); }
+/* A sound row: play, waveform, text, Pick, note on one line while the card is wide; in a card under 760px the text takes its own
+   line under the waveform and the note goes under both. Nothing is a fixed width: every column may shrink to its minimum. */
+.rrow { display: grid; grid-template-columns: 32px minmax(120px, 340px) minmax(160px, 1fr) auto minmax(120px, 210px);
+  grid-template-areas: "play wave text pick note"; align-items: center; gap: 12px; min-width: 0; padding: 6px 6px; border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; transition: background .16s var(--quint), border-color .16s var(--quint); }
 .rrow:hover:not(.sel) { background: var(--hover-fill); border-color: var(--hover-line); }
 .rrow.sel { background: var(--focus-fill); border-color: var(--fg); }
 .rrow.picked { box-shadow: inset 3px 0 0 var(--fg); }
 /* a non-sound row: open, text, Pick; the note under the text (a row nobody has noted shows it only when selected) */
-.rrow.plain { grid-template-columns: 32px minmax(0, 1fr) auto; row-gap: 6px; }
-.rrow.plain .rnote { grid-column: 2 / -1; }
+.rrow.plain { grid-template-columns: 32px minmax(0, 1fr) auto; grid-template-areas: "play text pick" ". note note"; row-gap: 6px; }
 .rrow.plain:not(.sel) .rnote:placeholder-shown { display: none; }
+@container (max-width: 760px) { /* a narrow card: a narrow window, or the preview pane beside the list */
+  .rrow:not(.plain) { grid-template-columns: 32px minmax(0, 1fr) auto; grid-template-areas: "play wave pick" "play text text" ". note note"; row-gap: 6px; }
+}
 .rrow.ref .rname { font-style: italic; }
 .rbadge { margin-left: 10px; padding: 3px 6px; border: 1px solid var(--glass-line); border-radius: 3px; font: 600 9px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); vertical-align: 2px; }
 .rbadge.cand { color: var(--accent); border-color: var(--cand-line); }
@@ -176,24 +181,26 @@ body.reviewing #info, body.reviewing #pick, body.reviewing #bar, body.reviewing 
   .rbody.pv { grid-template-columns: minmax(0, 1fr); }
   .rbody.pv .rpane { order: -1; height: 46vh; z-index: 1; }
 }
-.rplay { width: 32px; height: 32px; display: grid; place-items: center; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 50%; font-size: 11px; cursor: pointer; }
+.rplay { grid-area: play; width: 32px; height: 32px; display: grid; place-items: center; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 50%; font-size: 11px; cursor: pointer; }
 .rplay:hover, .rrow.playing .rplay { border-color: var(--fg); }
 .rplay:disabled { opacity: .3; cursor: default; }
-.rwave { width: 340px; height: 40px; display: block; cursor: crosshair; touch-action: none; }
+.rwave { grid-area: wave; width: 100%; min-width: 0; height: 40px; display: block; cursor: crosshair; touch-action: none; }
 .rcut { display: flex; align-items: center; gap: 6px; margin-top: 3px; font: 400 11px/1 var(--mono); color: var(--accent); }
 .rcut.empty { display: none; font-family: var(--font); color: var(--text-3); }
 .rrow.sel .rcut.empty { display: flex; }
 .rclear { width: 18px; height: 18px; display: grid; place-items: center; padding: 0; background: none; border: 1px solid var(--glass-line); border-radius: 3px; font-size: 9px; color: var(--text-2); cursor: pointer; }
 .rclear:hover { border-color: var(--fg); color: var(--fg); }
 .rkind { font: 600 10px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); }
-.rtext { min-width: 0; }
-.rname { font-size: 14px; }
+.rtext { grid-area: text; min-width: 0; }
+.rline { display: flex; flex-wrap: wrap; align-items: baseline; min-width: 0; }
+.rname { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.rpick { grid-area: pick; }
 .rrow:not(.picked) .rname { color: var(--text-2); }
 .rrow.sel .rname, .rrow.picked .rname { color: var(--fg); }
 .rby { margin-left: 10px; font: 400 10px/1 var(--mono); color: var(--text-3); }
 .rdesc { margin-top: 2px; font-size: 12px; color: var(--text-3); }
 .rrow.sel .rdesc { color: var(--text-2); }
-.rnote { height: 30px; padding: 0 10px; background: var(--glass); border: 1px solid var(--glass-line); border-radius: var(--radius-sm); outline: none; font-size: 12px; }
+.rnote { grid-area: note; width: 100%; min-width: 0; height: 30px; padding: 0 10px; background: var(--glass); border: 1px solid var(--glass-line); border-radius: var(--radius-sm); outline: none; font-size: 12px; }
 .rnote:focus { border-color: var(--fg); }
 .rnote::placeholder { color: var(--text-3); }
 .note { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-3); }

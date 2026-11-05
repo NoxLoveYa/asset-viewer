@@ -56,7 +56,7 @@ another computer.
   `Cross-Origin-Resource-Policy: same-origin` and `X-Frame-Options: DENY`.
 - **Plugin code.** The bundled plugins in the tool's `plugins/` folder always load. Plugins in a project's `pluginDirs`
   are Python code from the project and run with your rights, so they load only when you start the viewer with
-  `--trust-project-plugins`. Plugins load once, at start, and are never downloaded.
+  `--trust-project-plugins`. Plugin code is imported once, at start (never again from disk while the viewer runs), and is never downloaded.
 - **Network.** The page loads nothing from the network. The server makes no outgoing request, except the
   `roblox-rig-export` thumbnail route, which only fetches from `https://thumbnails.roblox.com` and `https://*.rbxcdn.com`.
 

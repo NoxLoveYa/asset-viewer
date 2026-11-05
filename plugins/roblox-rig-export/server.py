@@ -107,6 +107,9 @@ def check_info_url(url):
     return _https_host(url, lambda host: host == "thumbnails.roblox.com")
 
 
+UPLOADS = Uploads()  # module-level: `register` runs again when the config is edited, the partial uploads must survive that
+
+
 def check_image_url(url):
     """The check for a thumbnail's image address (and any redirect on the way): https, a *.rbxcdn.com host, no credentials."""
     return _https_host(url, lambda host: host.endswith(THUMB_HOST_SUFFIX) and len(host) > len(THUMB_HOST_SUFFIX))
@@ -172,7 +175,7 @@ def register(api):
     if not isinstance(rigs, str) or not rigs:
         raise PluginError("plugin roblox-rig-export: roblox-anim rigsDir must be a folder path")
     api.writes(rigs)
-    uploads = Uploads()
+    uploads = UPLOADS
 
     def target(*parts):
         """The project path of a file under the rigs folder; a name Windows reserves (con, nul, aux...) is a 400."""

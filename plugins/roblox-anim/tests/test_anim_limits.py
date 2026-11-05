@@ -89,5 +89,53 @@ class CachePruneTest(LimitsCase):
         self.assertEqual(module()._cache, {})
 
 
+class ConfigReloadTest(LimitsCase):
+    """A project edits plugins.roblox-anim.files often: it applies without a restart, and the plugin code is not imported again."""
+
+    def edit(self, plugin):
+        path = self.write("asset-viewer.json", {"roots": ["assets"], "plugins": {"roblox-anim": plugin}})
+        self.edits = getattr(self, "edits", 0) + 1
+        os.utime(path, (os.path.getmtime(path) + 5 * self.edits,) * 2)
+
+    def clip(self, app, name="Idle"):
+        return [i for i in self.catalog(app)["items"] if i["kind"] == "anim" and i["name"] == name][0]
+
+    def test_files_bodyaim_defaultrig_and_rigsdir_follow_the_config(self):
+        self.write("assets/guns.json", {"Idle": {"fps": 30, "frames": [{}]}, "Aim": {"fps": 30, "frames": [{}]}})
+        self.write("rigs/one.json", {"parts": {}, "joints": {}})
+        self.write("other/two.json", {"parts": {}, "joints": {}})
+        self.write("asset-viewer.json", {"roots": ["assets"], "plugins": {"roblox-anim": {
+            "rigsDir": "rigs", "defaultRig": "one", "bodyAim": {"blade": 30},
+            "files": {"assets/guns.json": {"prop": "m1", "up": ["Aim"]}}}}})
+        app = self.make_app()
+        mod = module()
+        aim = self.clip(app, "Aim")
+        self.assertEqual((aim["rig"], aim["prop"], aim["stance"], aim["bodyAim"]), ("one", "m1", "up", {"blade": 30}))
+        self.assertEqual([r["name"] for r in self.catalog(app)["plugins"]["roblox-anim"]["rigs"]], ["one"])
+
+        self.edit({"rigsDir": "other", "defaultRig": "two", "bodyAim": {"blade": 45, "lockMax": 9},
+                   "files": {"assets/guns.json": {"prop": "m2", "busy": ["Aim"], "under": {"*": ["Idle"]}}}})
+        app.refresh(force=True)
+        aim = self.clip(app, "Aim")
+        self.assertEqual((aim["rig"], aim["prop"], aim["stance"], aim["bodyAim"], aim["under"][0]["name"]),
+                         ("two", "m2", "busy", {"blade": 45, "lockMax": 9}, "Idle"))
+        self.assertEqual([r["name"] for r in self.catalog(app)["plugins"]["roblox-anim"]["rigs"]], ["two"])
+        self.assertEqual(app.public_config()["plugins"][0]["config"]["rigsDir"], "other")
+        self.assertEqual((app.notices, app.error), ([], None))
+        self.assertIs(module(), mod)  # the same imported module
+
+    def test_a_typo_in_the_files_block_is_reported_and_the_old_config_keeps_working(self):
+        self.write("assets/guns.json", {"Idle": {"fps": 30, "frames": [{}]}})
+        self.write("asset-viewer.json", {"roots": ["assets"], "plugins": {"roblox-anim": {"files": {"assets/guns.json": {"prop": "m1"}}}}})
+        app = self.make_app()
+        self.edit({"files": {"assets/guns.json": {"prop": 5}}})
+        app.refresh(force=True)
+        self.assertIn("plugins.roblox-anim.files", app.error)
+        self.assertEqual(self.clip(app)["prop"], "m1")
+        self.edit({"files": {"assets/guns.json": {"prop": "m3"}}})
+        app.refresh(force=True)
+        self.assertEqual((app.error, self.clip(app)["prop"]), (None, "m3"))
+
+
 if __name__ == "__main__":
     unittest.main()

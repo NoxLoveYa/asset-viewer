@@ -5,6 +5,7 @@
 //   viewer.modelAddon({ id, applies(item), async prepare(api), destroy() })   see views/model.js
 //   viewer.keyHelp(text)                    a line in the key hints
 //   viewer.config / viewer.api(path, init)  the plugin's client config; fetch of /api/plugins/<name>/<path>
+//   viewer.onConfig(fn)                     fn(config) after the config changed; viewer.config is replaced, so read it at use time
 // A plugin's client.js exports register(viewer).
 import { request } from "./api.js";
 
@@ -36,17 +37,44 @@ const keyHelp = (text) => registry.keyHelp.push(String(text));
 
 export const viewLoader = (kind) => registry.loaders.get(kind) || null;
 
-// The `viewer` object one plugin's register() receives.
+// The `viewer` object one plugin's register() receives, kept by name: its `config` is replaced when the config changes.
+const viewers = new Map();
+
 function viewerFor(name, config) {
-  return {
+  const viewer = {
     name,
     config,
+    onConfig: (fn) => { listeners.get(name).add(fn); },
     addCategory,
     addView,
     modelAddon,
     keyHelp,
     api: (path, init = {}) => request(`/api/plugins/${encodeURIComponent(name)}/${path.replace(/^\//, "")}`, init),
   };
+  viewers.set(name, viewer);
+  listeners.set(name, new Set());
+  return viewer;
+}
+
+const listeners = new Map(); // plugin name -> Set<fn(config)>
+
+export const configOf = (name) => viewers.get(name)?.config; // for tests and tools
+
+// Gives each loaded plugin's viewer its new client config (in place: `viewer.config` read at use time is current) and calls
+// its onConfig callbacks. Returns the names of the plugins whose config changed.
+export function updatePluginConfigs(list) {
+  const changed = [];
+  for (const p of list || []) {
+    const viewer = viewers.get(p.name);
+    const next = p.config || {};
+    if (!viewer || JSON.stringify(viewer.config) === JSON.stringify(next)) continue;
+    viewer.config = next;
+    changed.push(p.name);
+    for (const fn of listeners.get(p.name)) {
+      try { fn(next); } catch (e) { console.error(`plugin ${p.name} onConfig:`, e); }
+    }
+  }
+  return changed;
 }
 
 // Adds each plugin's stylesheets and runs its client.js. A failing plugin is reported, not fatal.

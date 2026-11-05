@@ -18,9 +18,12 @@ The core's own categories register through the same client calls, so a plugin's 
 - Plugins load in config order, except that a plugin in `requires` loads before the plugin that needs it.
 - A plugin that fails to load (bad manifest, wrong type in its config, an exception in `register`) stops the viewer at
   start-up with the plugin's name in the error.
-- Plugins load once, at start, and `register` runs once. A change to `plugins` (a plugin's config included) or
-  `pluginDirs` in the config takes effect after a restart; until then the page shows a warning. After you edit
-  `server.py`, restart the viewer. After you edit a client file, reload the page.
+- Plugin code is imported once, at start. When the config is edited, `register(api)` runs again on that same module
+  with the plugin's config re-merged and re-checked, so what a plugin derives from `api.config` is rebuilt: keep state
+  that must outlive an edit (a cache, partial uploads) at module level, not inside `register`. Turning a plugin on or
+  off, or changing `pluginDirs`, takes effect after a restart; until then the page shows a warning. After you edit
+  `server.py`, restart the viewer. After you edit a client file, reload the page. A config edit needs no reload: on the
+  page `viewer.config` is replaced and the open item is shown again (see `viewer.onConfig`).
 
 ## A minimal plugin
 
@@ -150,7 +153,7 @@ that the spec does not know is a warning. The project config's `enabled` key is 
 
 ## Server API
 
-`server.py` defines `register(api)`. The viewer calls it once, at start. `api` belongs to this plugin only.
+`server.py` defines `register(api)`. The viewer calls it at start and again, on the same imported module, whenever the config is edited. `api` belongs to this plugin only.
 
 | Member | Meaning |
 |---|---|
@@ -290,7 +293,8 @@ If it throws, the page shows `Plugin <name> did not load` and works without the 
 | Member | Meaning |
 |---|---|
 | `viewer.name` | The plugin name. |
-| `viewer.config` | The plugin's client config (`api.client_config`, else its merged config). |
+| `viewer.config` | The plugin's client config (`api.client_config`, else its merged config). It is replaced when the config is edited, so read `viewer.config` where you use it, not a copy made in `register`. |
+| `viewer.onConfig(fn)` | `fn(config)` runs after the plugin's config changed. The open item is shown again afterwards (model add-ons prepare again), so most plugins need no callback. |
 | `viewer.addCategory({kind, label, icon, view, rowMeta})` | A nav category for a kind. `view` is a function that returns `import(...)` of a view module. `icon` names a theme token: `"anim"` draws `--icon-anim`. `rowMeta(item)` is the text at the right of a list row (default: the file size). |
 | `viewer.addView(kind, loader)` | A view for a kind that already has a category. |
 | `viewer.modelAddon(def)` | A model add-on (see below). |

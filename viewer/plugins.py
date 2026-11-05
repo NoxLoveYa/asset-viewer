@@ -4,7 +4,9 @@
 A project turns a plugin on by naming it under `plugins` in its config. A plugin's `server.py` is code that runs with the
 user's rights: the tool's own `plugins/` always load, but a plugin from the config's `pluginDirs` (code that belongs to
 the project) loads only when the viewer is started with `--trust-project-plugins`. Plugins are never fetched, and their
-code is loaded once, at start: a changed `plugins` or `pluginDirs` section needs a restart.
+code is imported once, at start. A config edit that only changes a plugin's own config takes effect at once (each plugin's
+`register` runs again on the same imported module with the new config); enabling or disabling a plugin, or changing
+`pluginDirs`, needs a restart.
 `PluginAPI` is what `register` gets; see the methods for the contract. Docs: docs/plugins.md.
 """
 import copy
@@ -261,6 +263,8 @@ class Registry:
         self.checks = []
         self.read_areas = []
         self.warnings = []
+        self.base_warnings = []  # the load-time ones (skipped project plugins), kept across a reconfigure
+        self.modules = {}  # name -> the imported server module
         self._by_name = {}
 
     def get(self, name):
@@ -338,8 +342,22 @@ class Registry:
         for n in names:
             if not visit(n, []) and n in project_found and n not in found:
                 reg.warnings.append("plugin %s skipped: it is in pluginDirs (project code); start with --trust-project-plugins" % n)
+        reg.base_warnings = list(reg.warnings)
         for n in order:
             reg._load_one(project, n, found[n][0], config.plugins[n])
+        return reg
+
+    @classmethod
+    def reconfigure(cls, old, project, config):
+        """A registry for a new config built from the plugin code `old` already loaded: the same plugins in the same order,
+        each `register` called again with its config re-merged (manifest defaults <- the project's) and re-validated.
+        Nothing is imported again, so editing a plugin's server.py on disk changes nothing until a restart. Plugins the
+        config enabled or disabled since are not touched (the caller warns). Raises PluginError; `old` is left as it was."""
+        reg = cls()
+        reg.base_warnings = list(old.base_warnings)
+        reg.warnings = list(old.base_warnings)
+        for plugin in old.plugins:
+            reg._load_one(project, plugin.name, plugin.dir, config.plugins.get(plugin.name) or {}, module=old.modules.get(plugin.name))
         return reg
 
     def _manifest(self, name, directory):
@@ -367,7 +385,8 @@ class Registry:
                 raise PluginError("plugin %s: plugin.json %s must be a file name" % (name, key))
         return m
 
-    def _load_one(self, project, name, directory, user_config):
+    def _load_one(self, project, name, directory, user_config, module=None):
+        """Merge, validate and register one plugin. `module` is its already imported server module (a reconfigure)."""
         m = self._manifest(name, directory)
         for key in ("server", "client"):
             if m.get(key):
@@ -384,7 +403,8 @@ class Registry:
         self.plugins.append(plugin)
         self._by_name[name] = plugin
         if m.get("server"):
-            module = self._import(name, directory, m["server"])
+            module = module or self._import(name, directory, m["server"])
+            self.modules[name] = module
             if not callable(getattr(module, "register", None)):
                 raise PluginError("plugin %s: %s has no register(api)" % (name, m["server"]))
             try:

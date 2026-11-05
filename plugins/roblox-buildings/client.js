@@ -19,7 +19,8 @@ const DEFAULT_GLASS = "^Glass"; // pane meshes of a prop when the config names n
 const AXES = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
 const isMover = (m) => !!m && (m.slide || (m.hinge && m.swing));
 
-let cfg = { openingProps: null };
+let viewerRef = null;
+const openingProps = () => viewerRef?.config?.openingProps || null;
 
 async function getJson(ref) {
   const r = await fetch(url(ref.path, ref.mtime), { signal: AbortSignal.timeout(30000) });
@@ -167,9 +168,10 @@ async function furnish(api, report, show) {
     group.add(obj);
   };
   for (const o of report.openings || []) {
-    if (!o.prop || !cfg.openingProps) continue;
+    const template = openingProps();
+    if (!o.prop || !template) continue;
     const dir = o.prop.startsWith("Door") ? "doors" : "windows";
-    jobs.push(loadProp(api, cfg.openingProps.replace("{dir}", dir).replace("{prop}", o.prop)).then((p) => p && place(p, o.pos, o.yaw)));
+    jobs.push(loadProp(api, template.replace("{dir}", dir).replace("{prop}", o.prop)).then((p) => p && place(p, o.pos, o.yaw)));
   }
   for (const p of report.props || []) {
     if (p.exists && p.path) jobs.push(loadProp(api, p.path).then((m) => m && place(m, p.pos, p.yaw)));
@@ -240,7 +242,7 @@ const propSidecar = {
 };
 
 export function register(viewer) {
-  cfg = { ...cfg, ...viewer.config };
+  viewerRef = viewer; // its config is replaced when the project's config changes: read it where it is used
   viewer.modelAddon(building);
   viewer.modelAddon(propSidecar);
   viewer.keyHelp("I props · C storey cut (buildings) · O open (props)");

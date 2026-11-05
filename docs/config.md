@@ -24,9 +24,13 @@ default to it.
 - The server looks at the file again on the next request after a change (the page polls every 2 seconds). A bad edit
   keeps the last good config, and the page shows the error in a red banner until the file is fixed. A bad config at
   start-up exits with code 2.
-- Every key applies at once, except `plugins` and `pluginDirs`: plugins load once, at start, so a change to either needs
-  a restart of the viewer. Until then the page shows a warning. A change to the categories or plugins the page knows
-  asks you to reload the page.
+- Every key applies at once, a plugin's own config under `plugins` included: it is merged with the plugin's defaults,
+  checked again, and the plugin's `register` runs again on the code imported at start, so the next catalog uses it. A bad
+  plugin config is shown as an error and the plugin keeps its old one. The exceptions are turning a plugin on or off and
+  `pluginDirs`: plugin code is imported once, at start, so those need a restart of the viewer, and the page shows a
+  warning until then. A plugin's config reaches its client code too: `viewer.config` is replaced while the page is open
+  (for example roblox-buildings `openingProps`), and the open item is shown again. Only a change to the categories or to
+  which plugins are on, or to their client files or styles, asks you to reload the page.
 - The file may be at most 1 MiB. A UTF-8 byte order mark is fine.
 
 ## Schemas
@@ -146,8 +150,8 @@ false` turns the plugin off but keeps its config. Each plugin's README lists its
 - With the flag, a plugin name found in two places is an error.
 - A plugin that is not found anywhere, that needs a plugin that is not turned on, or whose config has a wrong type is an
   error.
-- Plugins load once, at start. A change to `plugins` (a plugin's config included) or `pluginDirs` takes effect after a
-  restart.
+- Plugin code is imported once, at start. Editing a plugin's own config under `plugins` applies at once (see above);
+  turning a plugin on or off, or changing `pluginDirs`, takes effect after a restart.
 
 ## Files next to the config
 

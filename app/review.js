@@ -323,7 +323,7 @@ export function mount({ board, nav }, { open, picks, want, loaderFor, ctx: base,
       r.append(openBtn);
     }
     const text = el("div", "rtext");
-    const line = el("div");
+    const line = el("div", "rline");
     const number = (entry.id.split("/").pop().match(/^(\d+)_/) || [])[1];
     row.base = [number && "#" + number, entry.by, !sound && (item ? item.kind : "missing")].filter(Boolean).join("  ·  ");
     row.meta = el("span", "rby", row.base);
@@ -339,7 +339,10 @@ export function mount({ board, nav }, { open, picks, want, loaderFor, ctx: base,
       text.append(row.cutEl);
       cutLabel(row);
     }
-    if (!row.ref) row.pickBtn = button("Pick", (e) => { e.stopPropagation(); pick(row); }, { on: false });
+    if (!row.ref) {
+      row.pickBtn = button("Pick", (e) => { e.stopPropagation(); pick(row); }, { on: false });
+      row.pickBtn.classList.add("rpick");
+    }
     row.noteInput = el("input", "rnote");
     Object.assign(row.noteInput, { placeholder: "Note (which take, why...)", maxLength: NOTE_MAX });
     row.noteInput.setAttribute("aria-label", "Note for " + (entry.name || entry.id));
