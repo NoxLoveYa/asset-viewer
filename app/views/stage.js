@@ -31,6 +31,13 @@ export function themeColor(name) {
   return { color: new THREE.Color().setRGB(c.r / 255, c.g / 255, c.b / 255, THREE.SRGBColorSpace), alpha: c.a };
 }
 
+// A loading manager of your own (a loader with a URL modifier, say) asks for a frame whenever one of its files is in, as the
+// default one does. Returns the manager.
+export function redrawOnLoad(manager) {
+  manager.onProgress = () => stage?.invalidate();
+  return manager;
+}
+
 export function getStage(container) {
   if (stage) {
     container.hidden = false;
@@ -83,6 +90,9 @@ export function getStage(container) {
   let dirty = true, content = null, tick = null, owner = 0, last = performance.now(), lost = false;
   const invalidate = () => { dirty = true; };
   controls.addEventListener("change", invalidate);
+  // An image that arrives after the model was drawn changes what is drawn, and nothing else says so: every file a loader on
+  // three's default manager (textures, glTF, OBJ) or on `redrawOnLoad(manager)` finishes asks for a frame.
+  THREE.DefaultLoadingManager.onProgress = invalidate;
 
   // the tokens the stage is made of; run again when the theme changes
   const applyTheme = () => {
@@ -190,7 +200,9 @@ export function getStage(container) {
   new ResizeObserver(() => stage.resize()).observe(container);
   stage.resize();
   let reported = "";
-  renderer.setAnimationLoop(() => {
+  // One frame of the loop: runs the tick and the controls, and draws only if something asked for it. `stage.draw` is the same
+  // call, for a test that must not wait on the browser's frame timing.
+  function frame() {
     const now = performance.now();
     const dt = Math.min((now - last) / 1000, MAX_FRAME_DT);
     last = now;
@@ -205,6 +217,8 @@ export function getStage(container) {
       tick = null;
       if (String(e) !== reported) { reported = String(e); console.error("stage:", e); }
     }
-  });
+  }
+  stage.draw = frame;
+  renderer.setAnimationLoop(frame);
   return stage;
 }

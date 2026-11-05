@@ -312,7 +312,7 @@ The page's import map gives these names:
 | `three`, `three/addons/...` | The vendored three.js (0.170.0). |
 | `viewer/ui.js` | `el(tag, cls, text)`, `button`, `seg`, `stepper`, `sep`, `icon`, `activatable`, `url(path, mtime)` (the `/files/` URL of a project file), `fmtBytes`, `own(obj, key)` (an own property only, so a name like `constructor` finds nothing), and the stored settings (below). |
 | `viewer/theme.js` | `token(name)`, `color(name)` (`{css, r, g, b, a}`), `num(name, fallback)`, `onChange(fn)` (after a theme reload; returns the unsubscribe). |
-| `viewer/views/stage.js` | `getStage(container)`: the page's one three.js stage. `themeColor(name)`: a token as a three Color and its alpha. |
+| `viewer/views/stage.js` | `getStage(container)`: the page's one three.js stage. `themeColor(name)`: a token as a three Color and its alpha. `redrawOnLoad(manager)`: makes a `THREE.LoadingManager` of your own ask for a frame whenever one of its files arrives. |
 | `viewer/views/model.js` | `loadModel(path, mtime)`, `loadTexture(path, mtime, {srgb, repeat})`, `pbrMaterial(set, lookup, {alpha, doubleSided})`, `disposeObject(obj, skip)`, and the model view's `mount`. |
 
 Everything else under `/app/` is internal and may change. Load your own files by their absolute URL,
@@ -359,6 +359,11 @@ object on the stage. `tick(dt)` runs each frame; it returns `false` when nothing
 change. `lease.frame(box3, front)` frames a box, `lease.invalidate()` asks for a redraw, and `lease.release()` gives
 the stage back. A newer claim releases the older lease, and the old lease's calls then do nothing. The stage also
 exposes its `scene`, `camera`, `controls` (three's OrbitControls) and `renderer`.
+
+The stage draws only when something asked: a lease call, a control, a tick, a resize, a theme change, or a file that a
+three.js loader finished (loaders on three's default manager, and `loadModel`'s, ask by themselves). If your plugin changes
+what is drawn some other way, for example a material or a texture that changes later, call `lease.invalidate()` after.
+For a loader with a manager of your own, wrap it with `redrawOnLoad(manager)`.
 
 ### Model add-ons
 

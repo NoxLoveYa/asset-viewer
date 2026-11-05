@@ -577,6 +577,30 @@ async function main() {
     }
   }));
 
+  await step("app: a texture that loads after the model is shown is drawn without any input", () => withApp("", async (a) => {
+    const id = "assets/models/cube.obj";
+    await started(a);
+    const probe = a.d.createElement("script");
+    probe.type = "module";
+    probe.src = "/smoke/probe.js";
+    a.d.head.append(probe);
+    await waitFor(() => a.w.__stageTextures, "the probe to load");
+    const state = () => a.w.__stageTextures();
+    const before = new Set(state().uuids); // whatever the app opened with
+    a.w.__holdImages = true; // the cube's maps do not start loading before it was drawn
+    hop(a, id);
+    await waitFor(() => { const s = state(); return s.total > 0 && s.uuids.every((u) => !before.has(u)); }, "the cube on the stage with its maps");
+    check(state().loaded < state().total, `the maps were there before they were released (${JSON.stringify(state())})`);
+    // A headless frame comes when it comes (not on this page's virtual clock), so the frames are taken by hand: stage.draw()
+    // is the loop's own body, drawing only when something asked for a frame.
+    for (let i = 0; i < 10; i++) a.w.__draw(); // until the framing and the controls' damping have settled: nothing asks for a frame
+    a.w.__releaseImages();
+    await waitFor(() => state().loaded === state().total, () => "the maps to load " + JSON.stringify(state()), 20000);
+    // no mouse, no key: a frame is there only if the loading asked for it
+    a.w.__draw();
+    check(state().uploaded === state().loaded, `${state().loaded - state().uploaded} of ${state().loaded} loaded maps were never drawn (${JSON.stringify(state())})`);
+  }), { webgl: true });
+
   frames.forEach((f) => f.close());
 }
 

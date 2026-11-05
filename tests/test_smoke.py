@@ -88,6 +88,7 @@ class SmokePageTest(SmokeServer):
             js = f.read()
         self.assertIn("spills past its card", js)
         self.assertIn("reaches its viewer, with no reload banner", js)
+        self.assertIn("a texture that loads after the model is shown is drawn without any input", js)
         for tag in ("(H4)", "(H5)", "(M3)", "(H6)", "(M12)", "(M4)"):
             self.assertIn(tag, js)
 

@@ -4,7 +4,7 @@
 // it through model add-ons (viewer.modelAddon): extra looks, groups, bar controls, a clipping plane, a per-frame tick.
 // A public module (plugins import "viewer/views/model.js"): loadModel, loadTexture, pbrMaterial, disposeObject, mount.
 import * as THREE from "three";
-import { getStage, themeColor } from "./stage.js";
+import { getStage, themeColor, redrawOnLoad } from "./stage.js";
 import { button, seg, sep, el, pref, setPref, url, own, isString } from "../ui.js";
 import * as theme from "../theme.js";
 import { registry } from "../plugins.js";
@@ -24,7 +24,7 @@ export async function loadModel(path, mtime, { blank = false } = {}) {
   const u = url(path, mtime);
   if (ext === "fbx") {
     const { FBXLoader } = await import("three/addons/loaders/FBXLoader.js");
-    const manager = new THREE.LoadingManager();
+    const manager = redrawOnLoad(new THREE.LoadingManager()); // the textures the file names arrive after it is drawn
     if (blank) manager.setURLModifier((x) => (/\.(png|jpe?g|webp)(\?|$)/i.test(x) ? BLANK : x));
     const res = await timedFetch(u, {}, LOAD_TIMEOUT_MS);
     if (!res.ok) throw new Error(res.status + " " + res.statusText);
