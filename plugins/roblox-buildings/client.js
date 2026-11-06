@@ -2,7 +2,8 @@
 // roblox-buildings, client side: two model add-ons.
 //   building      a model with a building report beside it (<stem>.json: objects + files): the Building look (one mesh per
 //                 finish, tiling set, Roblox's SurfaceAppearance.Color tint), its door, window and furniture props in
-//                 their places (Props, I; orange boxes are props still to make) and a cut under each storey's ceiling (C).
+//                 their places (Props, I; orange boxes are props still to make), their states (States, T: drawers out,
+//                 doors ajar or gone, as the report says; off shows everything shut), dust, and a cut under each storey's ceiling (C).
 //   prop-sidecar  a prop with a sidecar (<stem>.json: objects, some with a slide or a hinge and swing): turned front to -Z
 //                 like Studio's importer, and Open (O) eases its drawers, panels and doors open and back.
 // The server (server.py) says which models have which file: item.ext["roblox-buildings"] = {report} | {sidecar}.
@@ -10,6 +11,7 @@ import * as THREE from "three";
 import { pref, setPref, url, own } from "viewer/ui.js";
 import { themeColor } from "viewer/views/stage.js";
 import { onChange } from "viewer/theme.js";
+import { placement, furnitureState, openingState, apply } from "./pose.js";
 
 const PLUGIN = "roblox-buildings";
 const EASE_S = 0.4; // an opening part takes this long
@@ -92,6 +94,18 @@ function loadProp(api, path) {
   return p.then((src) => (src ? src.clone() : null));
 }
 
+// A prop's sidecar objects (its movers), from the catalog's say-so: null for a prop with none. Cached by file and time.
+const sidecars = new Map();
+function sidecarOf(api, path) {
+  const ref = api.lookup(path)?.ext?.[PLUGIN]?.sidecar;
+  if (!ref) return Promise.resolve(null);
+  const key = `${ref.path}?${ref.mtime}`;
+  if (!sidecars.has(key)) {
+    sidecars.set(key, getJson(ref).then((j) => j.objects || null).catch((e) => { sidecars.delete(key); console.warn(`${PLUGIN}: sidecar ${ref.path}:`, e.message); return null; }));
+  }
+  return sidecars.get(key);
+}
+
 // ---------- the building add-on ----------
 const building = {
   id: "building",
@@ -125,9 +139,15 @@ const building = {
     }, { preferred: true });
 
     const show = pref("model.props", true);
-    const props = await furnish(api, report, show);
+    const { group: props, poses, owned } = await furnish(api, report, show);
     api.addGroup(props);
     api.addButton("Props", "I", (on) => { setPref("model.props", on); props.visible = on; }, { on: show });
+    if (poses.length) { // props with a state: drawers out, doors ajar or gone; off shows all of them shut
+      const states = pref("model.states", true);
+      const setStates = (on) => poses.forEach((p) => p(on));
+      setStates(states);
+      api.addButton("States", "T", (on) => { setPref("model.states", on); setStates(on); }, { on: states });
+    }
 
     const storeys = report.storeys || [];
     const options = [["off", "Whole"], ...storeys.map((s) => ["s" + s.index, "Storey " + s.name])];
@@ -142,50 +162,103 @@ const building = {
     api.onShown(applyCut); // the plane needs the height the model ended up at
     api.turnY(Math.PI); // Blockbench's export turned every mesh 180 degrees about Y: back to the front at -Z
     const n = (x) => (x || []).length;
-    api.meta([`${(report.tris || 0).toLocaleString()} tris`, `${Object.keys(report.objects).length} meshes`, `${n(report.rooms)} rooms`,
-      `${n(report.openings)} openings`, `${n(report.props)} props`, report.size ? `${report.size.map((v) => v.toFixed(1)).join(" × ")} studs` : null,
+    api.meta([conditionText(report.condition), `${(report.tris || 0).toLocaleString()} tris`, `${Object.keys(report.objects).length} meshes`, `${n(report.rooms)} rooms`,
+      `${n(report.openings)} openings`, `${n(report.props)} props`, poses.length ? `${poses.length} posed` : null,
+      report.size ? `${report.size.map((v) => v.toFixed(1)).join(" × ")} studs` : null,
       n(report.warnings) ? `${n(report.warnings)} warnings` : "no warnings"].filter(Boolean));
-    this.live = { tiled, props };
+    this.live = { tiled, props, owned };
   },
 
   destroy() {
     if (!this.live) return;
-    const { tiled, props } = this.live;
+    const { tiled, props, owned } = this.live;
     this.live = null;
     for (const m of tiled.values()) m.dispose(); // not its textures (the cache's) and not the shared glass / clay
+    for (const m of owned) m.dispose(); // the dusted copies of prop materials
     props.traverse((o) => { if (o.userData.wish) o.geometry.dispose(); }); // the boxes are its own; prop clones share the cache's
   },
 };
 
-// Props in the building's frame: Blockbench's export turned every mesh 180 degrees about Y, so (x, y, z) -> (-x, y, -z).
+// "Ruined (level 4)" from the report's optional `condition` (an object with name and level, or a name or a level alone).
+function conditionText(c) {
+  if (c == null) return null;
+  if (typeof c !== "object") return `condition ${c}`;
+  const name = typeof c.name === "string" ? c.name : null;
+  const level = Number.isFinite(c.level) ? `level ${c.level}` : null;
+  return name || level ? `condition ${[name, level && (name ? `(${level})` : level)].filter(Boolean).join(" ")}` : null;
+}
+
+// Props in the building's frame (pose.js): a prop's `cf` (its mesh origin's CFrame) places it, else `pos` and `yaw`.
+// Returns the group, a function per posed prop or opening (apply its state on or off) and the materials it made.
 async function furnish(api, report, show) {
   const group = new THREE.Group();
   group.name = "@props";
-  const jobs = [];
-  const place = (obj, pos, yaw) => {
-    obj.position.set(-pos[0], pos[1], -pos[2]);
-    obj.rotation.y = THREE.MathUtils.degToRad(yaw || 0);
+  const jobs = [], poses = [], owned = new Set();
+  const dust = Number.isFinite(report.dust) && report.dust > 0 && report.dust < 1 ? report.dust : 1; // the furniture's colour multiplier
+  const dusted = new Map();
+  const dustOf = (m) => {
+    if (!dusted.has(m)) {
+      const d = m.clone();
+      d.color.multiplyScalar(dust);
+      owned.add(d);
+      dusted.set(m, d);
+    }
+    return dusted.get(m);
+  };
+  const place = (obj, p) => {
+    const m = placement(p);
+    obj.position.setFromMatrixPosition(m);
+    obj.quaternion.setFromRotationMatrix(m);
     group.add(obj);
+  };
+  // `plan` ({hide, pose} from pose.js): the named meshes of `obj` posed or hidden while the building's states are on
+  const posable = (obj, plan) => {
+    const meshes = new Map();
+    obj.traverse((o) => { if (o.isMesh) meshes.set(o.name, o); });
+    const moves = plan.pose.filter((t) => meshes.has(t.name)).map((t) => {
+      const mesh = meshes.get(t.name);
+      mesh.updateMatrix();
+      return { mesh, base: mesh.matrix.clone(), matrix: t.matrix };
+    });
+    const hidden = plan.hide.filter((n) => meshes.has(n)).map((n) => meshes.get(n));
+    if (!moves.length && !hidden.length) return;
+    const none = new THREE.Matrix4();
+    poses.push((on) => {
+      for (const m of moves) apply(m.mesh, obj, m.base, on ? m.matrix : none);
+      for (const h of hidden) h.visible = !on;
+    });
+  };
+  const addProp = async (path, p, state, furniture) => {
+    const obj = await loadProp(api, path);
+    if (!obj) return;
+    place(obj, p);
+    if (furniture && dust < 1) {
+      const glassMat = propGlass();
+      obj.traverse((o) => { if (o.isMesh && o.material !== glassMat) o.material = Array.isArray(o.material) ? o.material.map(dustOf) : dustOf(o.material); });
+    }
+    if (state == null) return;
+    const objects = await sidecarOf(api, path);
+    if (objects) posable(obj, furniture ? { hide: [], pose: furnitureState(objects, state) } : { hide: [], pose: [], ...openingState(objects, state) });
   };
   for (const o of report.openings || []) {
     const template = openingProps();
     if (!o.prop || !template) continue;
     const dir = o.prop.startsWith("Door") ? "doors" : "windows";
-    jobs.push(loadProp(api, template.replace("{dir}", dir).replace("{prop}", o.prop)).then((p) => p && place(p, o.pos, o.yaw)));
+    jobs.push(addProp(template.replace("{dir}", dir).replace("{prop}", o.prop), o, o.state, false));
   }
   for (const p of report.props || []) {
-    if (p.exists && p.path) jobs.push(loadProp(api, p.path).then((m) => m && place(m, p.pos, p.yaw)));
+    if (p.exists && p.path) jobs.push(addProp(p.path, p, p.state, true));
     else if (p.size) { // a prop still to make: a box of its size
       const [w, h, d] = p.size;
       const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wishMaterial());
       box.geometry.translate(0, h / 2, 0);
       box.userData.wish = true;
-      place(box, p.pos, p.yaw);
+      place(box, { pos: p.pos, yaw: p.yaw });
     }
   }
   await Promise.all(jobs);
   group.visible = show;
-  return group;
+  return { group, poses, owned };
 }
 
 // ---------- the prop-sidecar add-on ----------
@@ -245,5 +318,5 @@ export function register(viewer) {
   viewerRef = viewer; // its config is replaced when the project's config changes: read it where it is used
   viewer.modelAddon(building);
   viewer.modelAddon(propSidecar);
-  viewer.keyHelp("I props · C storey cut (buildings) · O open (props)");
+  viewer.keyHelp("I props · T states: drawers, doors ajar or gone (buildings) · C storey cut (buildings) · O open (props)");
 }

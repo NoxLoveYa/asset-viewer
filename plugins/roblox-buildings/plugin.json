@@ -4,7 +4,7 @@
   "server": "server.py",
   "client": "client.js",
   "styles": ["style.css"],
-  "files": [],
+  "files": ["pose.js"],
   "requires": [],
   "defaults": {"openingProps": null},
   "types": {"openingProps": "string|null"}

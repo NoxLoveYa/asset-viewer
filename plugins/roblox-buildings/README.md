@@ -1,6 +1,7 @@
 # roblox-buildings
 
-Two model add-ons for buildings and props made for Roblox, driven by a JSON file beside the model. The server tells the
+Two model add-ons for buildings and props made for Roblox, driven by a JSON file beside the model. Keys: `I` props,
+`T` states (buildings), `C` storey cut (buildings), `O` open (props). The server tells the
 page which models have one (`item.ext["roblox-buildings"]`), so a plain model never makes the page look for a file that
 is not there.
 
@@ -21,12 +22,37 @@ open building without a reload.
   and Roblox's `SurfaceAppearance.Color` tint. Glass objects draw as glass; a mesh the report does not know draws as clay.
 - **Props** (`I`): the report's door, window and furniture props, placed in the building's frame. A prop that is not
   made yet (`exists` false) is a box of its `size`, coloured by the `wish-box` token.
+- **States** (`T`, shown when the building has any): the props and openings as the report poses them, or all shut (off).
+  A furniture prop's `state` poses its sidecar objects (below); an opening's `state` turns its lead leaf or removes the
+  leaves. Off, every drawer, door and leaf is at its shut pose. Placement by `cf` (tipped props) does not change.
+- **Dust**: the furniture's colour is multiplied by the report's `dust`. Doors and windows are not dusted.
 - **Storey cut** (`C`, or the Whole / Storey buttons): a clip plane 0.6 studs under the chosen storey's ceiling, to look
   in from above.
-- The meta line reads the report: triangles, meshes, rooms, openings, props, size, warnings.
+- The meta line reads the report: `condition`, triangles, meshes, rooms, openings, props, how many props and openings
+  are posed, size, warnings.
 
-The FBX of a Blockbench export is turned 180 degrees about Y, so the model is turned back (front at -Z) and props are
-placed at `(-x, y, -z)` of the report's positions.
+The FBX of a Blockbench export is turned 180 degrees about Y, so the model is turned back (front at -Z). Report
+positions and rotations are in the Roblox frame; the add-on works in the FBX's frame, where `(x, y, z)` is `(-x, y, -z)`
+and a rotation is conjugated by the turn (`pose.js`, no page code, so a script can run it).
+
+### Placement and poses
+
+- **Place**: a prop's `cf` (12 numbers `[x, y, z, r00 .. r22]`, row-major) is the CFrame of its mesh origin in the
+  building's frame, and a tipped or leaning prop is placed by it. Without `cf` (or a bad one), `pos` and `yaw` (degrees
+  about Y) place it. Openings use `pos` and `yaw`. A box for a prop still to make uses `pos` and `yaw`.
+- **Furniture `state`** `{object: amount}` (on a prop): the object named is moved by `amount`: a sliding object by that
+  fraction of its `slide`, a hinged one by that many degrees about its `hinge` and `axis` (positive: counter-clockwise
+  seen from the axis's + end). Every `Glass_*` object with the same slide, or hinge and axis, moves with it. Needs the
+  prop's sidecar; a prop without one stays shut.
+- **Opening `state`** (on an opening): `"removed"` draws no leaf (every hinged object that is not glass, and the glass with
+  its motion, is hidden; the frame and any sliding part stay). An object `{Leaf: degrees}` turns the *lead leaf*, the
+  first hinged non-glass object by name, and its panes; an angle for another object is ignored.
+
+### Report fields the add-on reads (all optional)
+
+`props[].cf`, `props[].state`, `openings[].state`, `dust` (number under 1 darkens the furniture), `condition`
+(`{"level": 4, "name": "Ruined"}`, or just a name or a level; shown in the meta line). Nothing else is needed, and a
+report without them draws as before.
 
 The report shape (keys not listed are ignored):
 
@@ -38,8 +64,10 @@ The report shape (keys not listed are ignored):
   "files": {"fbx": "assets/buildings/town/house_01.fbx"},
   "storeys": [{"index": 0, "name": "g", "y": 1.0, "height": 15.0, "clear": 13.5}],
   "rooms": [{"name": "kitchen"}],
-  "openings": [{"prop": "Door_Wood", "pos": [x, y, z], "yaw": 90}],
-  "props": [{"prop": "Bed", "pos": [x, y, z], "yaw": 270, "size": [w, h, d], "exists": true, "path": "assets/props/bedroom/Bed.fbx"}],
+  "openings": [{"prop": "Door_Wood", "pos": [x, y, z], "yaw": 90, "state": {"Leaf": 18.8}}],
+  "props": [{"prop": "Bed", "pos": [x, y, z], "yaw": 270, "cf": [x, y, z, 0, 0, -1, 0, 1, 0, 1, 0, 0],
+             "state": {"Drawer_1": 0.4}, "size": [w, h, d], "exists": true, "path": "assets/props/bedroom/Bed.fbx"}],
+  "condition": {"level": 4, "name": "Ruined"}, "dust": 0.76,
   "warnings": []
 }
 ```
@@ -75,4 +103,9 @@ forgets files that a scan no longer meets.
 ## For other plugins
 
 Prop models are loaded once and cloned per place. Clones share geometry and materials, and a least-recently-used cache
-frees the sources (never a model's disposal), so one building's teardown cannot break the next one's props.
+frees the sources (never a model's disposal), so one building's teardown cannot break the next one's props. A posed
+mesh changes its own matrix only (the shared geometry is untouched); a dusted building makes its own copies of the
+prop materials and frees them in `destroy`.
+
+`pose.js` (listed in the manifest's `files`) holds the maths with no page code; `tests/test_pose.py` runs it under node
+(skipped when node is missing).

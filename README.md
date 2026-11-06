@@ -149,7 +149,7 @@ files and folders whose names start with `.` are never listed.
 | Where | Keys |
 |---|---|
 | Everywhere | Up / Down: item (in open folders only). `[` / `]`: previous / next folder, opened. `/`: search. `1`-`9`: category. `R`: review board (when there is something to review). Enter or Esc leaves a text box. |
-| Models | `W` wireframe, `S` spin, `F` frame. Left drag orbits, right drag pans, the wheel zooms. Plugins add keys (e.g. `I`, `C`, `O` for `roblox-buildings`). |
+| Models | `W` wireframe, `S` spin, `F` frame. Left drag orbits, right drag pans, the wheel zooms. Plugins add keys (e.g. `I`, `T`, `C`, `O` for `roblox-buildings`). |
 | Textures, VFX | `T` tile. Space plays or pauses a flipbook. |
 | Sounds | Space play / stop, `L` loop. Click the waveform to play from that point. |
 | Review board | Up / Down: candidate (with Autoplay on, a sound plays). Left / Right: group (past the last group, into the next review). `[` / `]`: previous / next review. `/`: find a review. Space: play. `P`: pick. `N` or Enter: note. `X`: whole file (clears the cut). `R`: back to the catalog. The preview's own keys work too. |
@@ -294,7 +294,7 @@ in `plugins/`:
 | Plugin | What it does |
 |---|---|
 | [`roblox-anim`](plugins/roblox-anim/README.md) | Plays baked animation clip JSON on Roblox rigs (an Animations category). |
-| [`roblox-buildings`](plugins/roblox-buildings/README.md) | Model add-ons for buildings and props with a JSON beside them: tiled tinted finishes, furniture props, storey cuts, opening doors and drawers. |
+| [`roblox-buildings`](plugins/roblox-buildings/README.md) | Model add-ons for buildings and props with a JSON beside them: tiled tinted finishes, furniture props placed by `cf` and posed by their `state` (drawers out, doors ajar or gone), dust, storey cuts, opening doors and drawers. |
 | [`roblox-rig-export`](plugins/roblox-rig-export/README.md) | Takes rigs exported from Roblox Studio into `roblox-anim`'s rigs folder. Needs `roblox-anim`. |
 
 To write your own, see [docs/plugins.md](docs/plugins.md).
